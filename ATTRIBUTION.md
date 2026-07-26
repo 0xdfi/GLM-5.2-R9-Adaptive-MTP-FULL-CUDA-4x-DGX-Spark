@@ -35,7 +35,7 @@ Pinned at commit `600848707ce93fe42fedbc9dd4429116696e425d`. Files used:
 | `patches/adaptive-mtp-vllm-hooks.patch` | **reconciled, not applied verbatim** — see §4 |
 | `adaptive-mtp/README.md` | policy documentation and the `max_num_seqs=1` tuning caveat |
 
-* PR #72: <https://github.com/CosmicRaisins/glm-5.2-gb10/pull/72>
+* PR #72: <https://github.com/local-inference-lab/vllm/pull/72>
 
 ### local-inference-lab / vllm — Luke Alonso
 
