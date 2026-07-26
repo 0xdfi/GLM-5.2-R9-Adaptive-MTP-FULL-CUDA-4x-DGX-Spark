@@ -470,7 +470,7 @@ down.
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | controller internals, graph dispatch, fail-closed design, telemetry schema |
 | [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md) | every measured number, its denominator, and what is *not* measured |
 | [`docs/BUILD.md`](docs/BUILD.md) | exact image provenance and public-rebuild reality |
-| [`docs/IMAGE.md`](docs/IMAGE.md) | tags, digests, verification commands |
+| [`docs/IMAGE.md`](docs/IMAGE.md) | release archive, checksums, image identity, verification commands |
 | [`ATTRIBUTION.md`](ATTRIBUTION.md) | upstream credit and licences |
 | [`NOTICE.md`](NOTICE.md) | required notices, including NVIDIA's |
 | [`SECURITY.md`](SECURITY.md) | threat model, `--trust-remote-code`, network defaults |

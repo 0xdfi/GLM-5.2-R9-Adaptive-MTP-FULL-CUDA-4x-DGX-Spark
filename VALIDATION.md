@@ -179,7 +179,7 @@ No production state was changed at any point while producing this package.
 | Local image list | 4 tags (R7, R8, R9-rejected, R9-live) | identical |
 | Endpoint health | HTTP 200 | HTTP 200 |
 
-Actions **not** taken: no image was pushed, tagged, saved, exported, loaded, pruned or
+Actions **not** taken during this pre-publication validation: no image was pushed, tagged, saved, exported, loaded, pruned or
 deleted; no registry login occurred; no GitHub repository, release or remote was
 created; no container was stopped, restarted, recreated or reconfigured; no
 `active-runtime` pointer, autostart descriptor, timer or model byte was touched. Three
@@ -211,3 +211,25 @@ removed afterwards.
 * `tests/test_no_private_data.py` is exempt from its own identifier and container-ID
   sweeps, because it necessarily contains the literals it bans. It is **not** exempt
   from the credential or private-address sweeps.
+
+## 8. Post-publication verification — 2026-07-26
+
+The limitations in §6–§7 describe the package before a public destination existed.
+Publication was subsequently completed and verified:
+
+| Check | Result |
+|---|---|
+| Public repository | Anonymous read succeeded at `0xdfi/GLM-5.2-R9-Adaptive-MTP-FULL-CUDA-4x-DGX-Spark` |
+| GitHub Actions | `validate` succeeded for commit `801af1129d67d1167001cbc727968a4c1420e84f` |
+| Public release | `r9-adaptive-full-bae57bd`, six uploaded assets, 9,602,161,612 aggregate bytes including `SHA256SUMS` |
+| Anonymous asset access | HTTP 200 for all five numbered parts; `SHA256SUMS` downloaded without authentication |
+| Partial content probe | first 1 MiB downloaded anonymously; zstd magic `28b52ffd` |
+| Complete archive | reconstructed from all five public parts; SHA-256 `f1c8a209f503da0a76b655eeb38e4fa573f1408e25b3547b605fbec5e7a67dc4` |
+| Fresh public round trip | anonymous clone + download on a DGX Spark; `zstd -t`; `docker load`; deep verifier |
+| Loaded image identity | `sha256:50261a39caf7109bcf49e33fa29b1ba9f7dd630f7ac9eebef72d7994aa98ea39`, `linux/arm64` |
+| Deep verifier | **19 passed, 0 failed**; no model weights found |
+
+The public route is a split GitHub release archive rather than GHCR. The active GitHub
+CLI OAuth token lacks `write:packages`, so no registry push was claimed. This does not
+block download or execution: `scripts/download-image.sh` downloads, resumes, verifies,
+and reconstructs the exact public image archive before `docker load`.

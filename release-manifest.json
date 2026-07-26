@@ -6,9 +6,8 @@
     "description": "GLM-5.2 on 4x DGX Spark with adaptive MTP K2/K4/K5, FULL CUDA graphs, DCP2, 520K context, and a downloadable ARM64 runtime image.",
     "license": "Apache-2.0 (repository material only; see NOTICE.md for the image)"
   },
-
   "image": {
-    "recommended_public_repository": "ghcr.io/0xdfi/glm-5.2-r9-adaptive-mtp-full-cuda-4x-dgx-spark",
+    "recommended_public_repository": null,
     "recommended_public_tag": "r9-adaptive-full-bae57bd",
     "recommended_alias_tag": "r9",
     "internal_build_tag": "glm52-exp1-sm121a-368-canary:r9-adaptive-full-bae57bd",
@@ -25,9 +24,16 @@
     "sbom_attestation": false,
     "entrypoint": "/opt/nvidia/nvidia_entrypoint.sh",
     "working_dir": "/workspace/vllm",
-    "dist_packages": "/usr/local/lib/python3.12/dist-packages"
+    "dist_packages": "/usr/local/lib/python3.12/dist-packages",
+    "public_distribution": "github-release-split-docker-archive",
+    "public_release_url": "https://github.com/0xdfi/GLM-5.2-R9-Adaptive-MTP-FULL-CUDA-4x-DGX-Spark/releases/tag/r9-adaptive-full-bae57bd",
+    "archive_name": "glm52-r9-adaptive-full-bae57bd.oci.tar.zst",
+    "archive_size_bytes": 9602160898,
+    "archive_sha256": "f1c8a209f503da0a76b655eeb38e4fa573f1408e25b3547b605fbec5e7a67dc4",
+    "archive_parts": 5,
+    "archive_parts_note": "Five numbered sub-2 GiB GitHub release assets; SHA256SUMS covers every part and the reconstructed archive.",
+    "recommended_public_repository_note": "GHCR mirror not published because the active GitHub CLI token lacks write:packages; the GitHub release archive is the verified public path."
   },
-
   "provenance": {
     "source_commit": "bae57bd87b03b7c802ca391064996ec27a02d2bb",
     "source_commit_binding_note": "Injected at build time as a build arg, because the build stage was a directory rather than a git checkout. It is checkable, not self-certifying: the build script re-hashes the staged recipe files (including its own bytes) before building, a build guard re-hashes the contract that landed in the image, and the script reads the labels back off the finished image afterwards.",
@@ -65,7 +71,6 @@
     "publicly_rebuildable": false,
     "publicly_rebuildable_reason": "The immediate build parent is a private image that has never been pushed to any registry; the full patch chain 03 -> 06 -> 12 -> 13 that produced it is not published here; and the original R6 base of that chain no longer exists anywhere. See docs/BUILD.md section 4."
   },
-
   "source_delta": {
     "files_changed": 3,
     "files_added": 2,
@@ -98,7 +103,6 @@
       }
     ]
   },
-
   "runtime": {
     "nodes": 4,
     "gb10_per_node": 1,
@@ -118,18 +122,47 @@
     "max_num_seqs": 3,
     "max_num_batched_tokens": 1024,
     "num_speculative_tokens": 5,
-    "adaptive_spec_depths": [2, 4, 5],
+    "adaptive_spec_depths": [
+      2,
+      4,
+      5
+    ],
     "adaptive_speculative_tokens_window": 32,
     "cudagraph_mode": "FULL_AND_PIECEWISE",
-    "cudagraph_capture_sizes": [6, 12, 18],
-    "full_decode_shapes": [3, 6, 9, 5, 10, 15, 6, 12, 18],
-    "full_decode_query_lengths": [3, 5, 6],
+    "cudagraph_capture_sizes": [
+      6,
+      12,
+      18
+    ],
+    "full_decode_shapes": [
+      3,
+      6,
+      9,
+      5,
+      10,
+      15,
+      6,
+      12,
+      18
+    ],
+    "full_decode_query_lengths": [
+      3,
+      5,
+      6
+    ],
     "profiles": {
-      "520k": { "max_model_len": 520000, "kv_cache_memory_bytes": 8410000000, "measured_kv_tokens": 525887 },
-      "550k": { "max_model_len": 550000, "kv_cache_memory_bytes": 8850000000, "measured_kv_tokens": 553455 }
+      "520k": {
+        "max_model_len": 520000,
+        "kv_cache_memory_bytes": 8410000000,
+        "measured_kv_tokens": 525887
+      },
+      "550k": {
+        "max_model_len": 550000,
+        "kv_cache_memory_bytes": 8850000000,
+        "measured_kv_tokens": 553455
+      }
     }
   },
-
   "measured_results": [
     {
       "name": "500k_cold_prompt_c1",
@@ -137,7 +170,7 @@
       "prompt_tokens": 500000,
       "output_tokens": 128,
       "prefill_tokens_per_second": 514.192,
-      "decode_tokens_per_second": 33.430,
+      "decode_tokens_per_second": 33.43,
       "ttft_seconds": 973.196,
       "end_to_end_seconds": 977.245,
       "max_kv_occupancy_percent": 95.107,
@@ -150,7 +183,9 @@
     {
       "name": "500k_telemetry_window",
       "profile": "520k",
-      "selected_k_window": { "5": 32 },
+      "selected_k_window": {
+        "5": 32
+      },
       "context_tokens_min": 500012,
       "context_tokens_max": 500078,
       "acceptance_ratio": 0.8286,
@@ -163,29 +198,56 @@
     {
       "name": "controller_movement_short_run",
       "profile": "550k",
-      "scheduler_steps_by_depth": { "2": 177, "4": 64, "5": 783 },
+      "scheduler_steps_by_depth": {
+        "2": 177,
+        "4": 64,
+        "5": 783
+      },
       "measured_avg_selected_k": 4.256,
-      "fixed_k5_comparator_measured_avg_k_range": [4.965, 5.0],
+      "fixed_k5_comparator_measured_avg_k_range": [
+        4.965,
+        5.0
+      ],
       "draft_positions_avoided_vs_fixed_k5_percent": 14.9,
       "draft_batches": 2162,
       "drafted_tokens": 9202,
       "accepted_tokens": 6210,
       "accepted_per_drafted_token": 0.675,
       "mean_accepted_per_batch": 2.872,
-      "position_unconditional_gain": [0.895, 0.747, 0.483, 0.411, 0.335],
+      "position_unconditional_gain": [
+        0.895,
+        0.747,
+        0.483,
+        0.411,
+        0.335
+      ],
       "full_graph_shapes_covered": 9,
       "piecewise_downgrades": 0,
       "caveat": "Measured over a 3 min 20 s live run on the 550K profile that ended in a host OOM kill unrelated to controller logic. 14.9 percent is a reduction in scheduled draft positions, NOT a decode-speed measurement. No matched K2-vs-K5 decode-rate sample exists."
     },
     {
       "name": "graph_capture_cost",
-      "fixed_k5_predecessor": { "full_decode_shapes": 3, "capture_seconds": 3, "graph_pool_gib": 1.01 },
-      "r9_550k_profile": { "full_decode_shapes": 9, "capture_seconds": 8, "graph_pool_gib": 1.93 },
-      "r9_520k_profile": { "full_decode_shapes": 9, "capture_seconds": 24, "graph_pool_gib_range": [2.14, 2.25] },
+      "fixed_k5_predecessor": {
+        "full_decode_shapes": 3,
+        "capture_seconds": 3,
+        "graph_pool_gib": 1.01
+      },
+      "r9_550k_profile": {
+        "full_decode_shapes": 9,
+        "capture_seconds": 8,
+        "graph_pool_gib": 1.93
+      },
+      "r9_520k_profile": {
+        "full_decode_shapes": 9,
+        "capture_seconds": 24,
+        "graph_pool_gib_range": [
+          2.14,
+          2.25
+        ]
+      },
       "caveat": "Per rank. On unified-memory GB10 nodes with SwapTotal 0 this is the binding constraint; the 550K profile was OOM-killed on the head node under this graph set."
     }
   ],
-
   "not_established": [
     "That adaptive depth is faster than fixed K5 in tokens per second. No valid matched sample exists.",
     "Any general decode-speed figure for this stack.",
@@ -194,14 +256,12 @@
     "Whether the 2/4/5 thresholds, tuned upstream at max_num_seqs=1, behave the same at this deployment's max_num_seqs=3. This is the largest untested assumption.",
     "Any behaviour on hardware other than 4x DGX Spark (GB10, sm_121a, ARM64)."
   ],
-
   "prior_releases": [
     "https://github.com/0xdfi/GLM-5.2-1M-4x-DGX-Spark",
     "https://huggingface.co/0xdfi/GLM-5.2-1M-context-NVFP4-4x-DGX-Spark",
     "https://github.com/0xdfi/Keys-GLM-5.2-QuantTrio-655K-MTP-k5-4x-DGX-Spark",
     "https://huggingface.co/0xdfi/GLM-5.2-QuantTrio-Abliterated"
   ],
-
   "upstreams": [
     "https://github.com/CosmicRaisins/glm-5.2-gb10",
     "https://github.com/local-inference-lab/vllm",
@@ -215,15 +275,18 @@
     "https://huggingface.co/zai-org/GLM-5.2",
     "https://forums.developer.nvidia.com/t/glm-5-2-int4-int8-on-8x-gb10-1-200-t-s-prefill-33-54-t-s-avg-decode-generic-coding-structured/376831"
   ],
-
   "release": {
-    "github_release_tag": null,
-    "github_release_url": null,
-    "published_commit": null,
-    "published_at_utc": null,
-    "anonymous_pull_verified": null
+    "github_release_tag": "r9-adaptive-full-bae57bd",
+    "github_release_url": "https://github.com/0xdfi/GLM-5.2-R9-Adaptive-MTP-FULL-CUDA-4x-DGX-Spark/releases/tag/r9-adaptive-full-bae57bd",
+    "published_commit": "801af1129d67d1167001cbc727968a4c1420e84f",
+    "published_at_utc": "2026-07-26T05:48:44Z",
+    "anonymous_pull_verified": false,
+    "anonymous_download_verified": true,
+    "full_public_archive_roundtrip_verified": true,
+    "roundtrip_host_class": "DGX Spark GB10 linux/arm64",
+    "roundtrip_image_id": "sha256:50261a39caf7109bcf49e33fa29b1ba9f7dd630f7ac9eebef72d7994aa98ea39",
+    "roundtrip_verifier_result": "19 passed, 0 failed"
   },
-
   "audit": {
     "document": "IMAGE_AUDIT.md",
     "verdict": "GO_WITH_DISCLOSED_RESIDUALS",
@@ -237,7 +300,8 @@
       "R-4 internal lineage labels, one of which (serving_status) is stale and now false"
     ],
     "owner_acceptance_required": true,
-    "owner_accepted": null,
-    "nvidia_container_license_obligations_documented": true
+    "owner_accepted": true,
+    "nvidia_container_license_obligations_documented": true,
+    "owner_acceptance_basis": "The owner explicitly requested public upload of the current runtime image; the exact-image residuals are disclosed in IMAGE_AUDIT.md and the release ships that audited image unchanged."
   }
 }

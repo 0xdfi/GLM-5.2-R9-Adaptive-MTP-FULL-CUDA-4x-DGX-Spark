@@ -193,12 +193,20 @@ class TestReleaseManifest(unittest.TestCase):
         )
         self.assertFalse(img["model_weights_included"])
 
-    def test_unknowns_are_null_not_guessed(self) -> None:
+    def test_registry_unknown_is_null_and_public_release_is_exact(self) -> None:
         img = self.data["image"]
         release = self.data["release"]
         self.assertIsNone(img["ghcr_digest"])
-        self.assertIsNone(release["github_release_url"])
-        self.assertIsNone(release["published_commit"])
+        self.assertEqual(
+            release["github_release_url"],
+            "https://github.com/0xdfi/GLM-5.2-R9-Adaptive-MTP-FULL-CUDA-4x-DGX-Spark/releases/tag/r9-adaptive-full-bae57bd",
+        )
+        self.assertEqual(
+            release["published_commit"],
+            "801af1129d67d1167001cbc727968a4c1420e84f",
+        )
+        self.assertTrue(release["anonymous_download_verified"])
+        self.assertTrue(release["full_public_archive_roundtrip_verified"])
 
     def test_delta_file_hashes_match_the_sealed_manifest(self) -> None:
         entries = parse_manifest(MANIFEST)
