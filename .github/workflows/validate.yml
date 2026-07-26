@@ -1,0 +1,160 @@
+name: validate
+
+# Static validation of the published package. Deliberately minimal in its
+# dependency surface:
+#
+#   * The ONLY third-party action used is actions/checkout, pinned to a commit
+#     SHA. No unpinned marketplace actions, no privileged secret-scanning
+#     services, no third-party code with access to this repository's token.
+#   * Secret scanning is a repository-local Python test, so it works the same
+#     way on a laptop as it does in CI and cannot be silently disabled by a
+#     service outage.
+#   * Link checking is done offline against the repository's own files. External
+#     URLs are extracted and reported but NOT fetched: a CI job that fails
+#     because someone else's server was slow is a job people learn to ignore.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        # actions/checkout v4.2.2, pinned by commit SHA
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+
+      - name: Shell syntax
+        run: |
+          set -euo pipefail
+          fail=0
+          while IFS= read -r f; do
+            echo "bash -n $f"
+            bash -n "$f" || fail=1
+          done < <(find . -name '*.sh' -not -path './.git/*' | sort)
+          exit "$fail"
+
+      - name: ShellCheck (informational)
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          find . -name '*.sh' -not -path './.git/*' -print0 \
+            | xargs -0 shellcheck --severity=warning || true
+
+      - name: Python syntax
+        run: |
+          set -euo pipefail
+          find . -name '*.py' -not -path './.git/*' -print0 \
+            | xargs -0 -n1 python3 -m py_compile
+          echo "all Python files compile"
+
+      - name: JSON syntax
+        run: |
+          set -euo pipefail
+          find . -name '*.json' -not -path './.git/*' -print0 \
+            | xargs -0 -n1 python3 -c 'import json,sys; json.load(open(sys.argv[1])); print("ok", sys.argv[1])'
+
+      - name: YAML syntax
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import glob, sys
+          try:
+              import yaml
+          except ImportError:
+              print("PyYAML unavailable; skipping YAML parse")
+              sys.exit(0)
+          bad = 0
+          for path in glob.glob(".github/workflows/*.yml"):
+              try:
+                  yaml.safe_load(open(path))
+                  print("ok", path)
+              except Exception as exc:
+                  print("FAIL", path, exc)
+                  bad = 1
+          sys.exit(bad)
+          PY
+
+      - name: Checksum manifest is well formed
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import re, sys
+          path = "provenance/r9-postimage.sha256"
+          rx = re.compile(r"^[0-9a-f]{64}  \S+$")
+          lines = [l for l in open(path).read().splitlines() if l.strip()]
+          bad = [l for l in lines if not rx.match(l)]
+          print(f"{len(lines)} entries in {path}")
+          if bad:
+              print("malformed entries:", bad[:5]); sys.exit(1)
+          if len(lines) != 35:
+              print(f"expected 35 entries, found {len(lines)}"); sys.exit(1)
+          if len({l.split("  ", 1)[1] for l in lines}) != len(lines):
+              print("duplicate paths"); sys.exit(1)
+          print("manifest OK")
+          PY
+
+      - name: Secret and private-data scan
+        run: python3 -m unittest tests.test_no_private_data -v
+
+      - name: Provenance tests
+        run: python3 -m unittest tests.test_provenance -v
+
+      - name: Runtime template tests
+        run: python3 -m unittest tests.test_runtime_templates -v
+
+      - name: Internal link check (offline)
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os, re, sys
+          from pathlib import Path
+
+          root = Path(".").resolve()
+          link_rx = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
+          broken, external = [], set()
+
+          for md in sorted(root.rglob("*.md")):
+              if ".git" in md.parts:
+                  continue
+              for target in link_rx.findall(md.read_text(encoding="utf-8")):
+                  if target.startswith(("http://", "https://", "mailto:")):
+                      external.add(target)
+                      continue
+                  path_part = target.split("#", 1)[0]
+                  if not path_part:          # pure in-page anchor
+                      continue
+                  resolved = (md.parent / path_part).resolve()
+                  if not resolved.exists():
+                      broken.append(f"{md.relative_to(root)} -> {target}")
+
+          print(f"{len(external)} external URLs found (not fetched):")
+          for url in sorted(external):
+              print("   ", url)
+          if broken:
+              print("\nBROKEN INTERNAL LINKS:")
+              for b in broken:
+                  print("   ", b)
+              sys.exit(1)
+          print("\nall internal links resolve")
+          PY
+
+      - name: No tracked env file
+        run: |
+          set -euo pipefail
+          if git ls-files --error-unmatch runtime/r9.env >/dev/null 2>&1; then
+            echo "runtime/r9.env is tracked; it must never be committed" >&2
+            exit 1
+          fi
+          echo "ok"

@@ -1,0 +1,243 @@
+{
+  "schema": "glm52-r9-adaptive-mtp-full-cuda-release/1",
+  "repository": {
+    "name": "GLM-5.2-R9-Adaptive-MTP-FULL-CUDA-4x-DGX-Spark",
+    "owner": "0xdfi",
+    "description": "GLM-5.2 on 4x DGX Spark with adaptive MTP K2/K4/K5, FULL CUDA graphs, DCP2, 520K context, and a downloadable ARM64 runtime image.",
+    "license": "Apache-2.0 (repository material only; see NOTICE.md for the image)"
+  },
+
+  "image": {
+    "recommended_public_repository": "ghcr.io/0xdfi/glm-5.2-r9-adaptive-mtp-full-cuda-4x-dgx-spark",
+    "recommended_public_tag": "r9-adaptive-full-bae57bd",
+    "recommended_alias_tag": "r9",
+    "internal_build_tag": "glm52-exp1-sm121a-368-canary:r9-adaptive-full-bae57bd",
+    "local_image_id": "sha256:50261a39caf7109bcf49e33fa29b1ba9f7dd630f7ac9eebef72d7994aa98ea39",
+    "local_image_id_note": "This is the hash of the image CONFIG, computed locally by the Docker daemon. It is NOT the registry manifest digest and cannot be derived from it.",
+    "ghcr_digest": null,
+    "ghcr_digest_note": "Assigned by the registry at push time. Fill in from `docker buildx imagetools inspect` after the push; do not compute it locally.",
+    "architecture": "arm64",
+    "os": "linux",
+    "size_bytes": 20342958503,
+    "rootfs_layers": 70,
+    "model_weights_included": false,
+    "signed": false,
+    "sbom_attestation": false,
+    "entrypoint": "/opt/nvidia/nvidia_entrypoint.sh",
+    "working_dir": "/workspace/vllm",
+    "dist_packages": "/usr/local/lib/python3.12/dist-packages"
+  },
+
+  "provenance": {
+    "source_commit": "bae57bd87b03b7c802ca391064996ec27a02d2bb",
+    "source_commit_binding_note": "Injected at build time as a build arg, because the build stage was a directory rather than a git checkout. It is checkable, not self-certifying: the build script re-hashes the staged recipe files (including its own bytes) before building, a build guard re-hashes the contract that landed in the image, and the script reads the labels back off the finished image afterwards.",
+    "dockerfile": "Dockerfile.r9-r8base",
+    "dockerfile_sha256": "0758f672f797fe0c2f4812170511821e20384c0d5e0f2e18a8f68df858199a1d",
+    "build_script_sha256": "620cee21545dd570c8664c169214def0dadb453b76272ca5b9b72ccefa2a4633",
+    "contract_sha256": "1b6f00259724f86eb58c047373dabeb9b4df21a1b7bd87995c09e6cfa16bfd77",
+    "immediate_build_parent_image_id": "sha256:7cc2e13a5f6504bdc31dd173f637239ae587e928b06410dcc8b0d29232a9cb2c",
+    "immediate_build_parent_public": false,
+    "layers_added_by_this_build": 13,
+    "layers_added_note": "Inspected output of the build, recorded after the fact. Never asserted in advance.",
+    "superseded_build": {
+      "tag": "glm52-exp1-sm121a-368-canary:r9-adaptive-full-9ebeb1c",
+      "image_id": "sha256:7fc4fd7f676bfa7dde53016aa2a83a1c66ac62486a039512dec8468069f6828d",
+      "fate": "destroyed by an external fleet-wide docker image prune, 64 seconds after it was built",
+      "relationship": "This release is a replacement built from a different immediate parent by a different recipe. It is NOT a bit-identical reproduction. The five-file R9 runtime payload is byte-identical; the layer structure and provenance are not."
+    },
+    "vllm_upstream_commit": "e232d262369b8c918cf478a7a96a0fcf8127cf65",
+    "vllm_version_string": "0.1.dev17863+ge232d2623.exp1sm121a368r4dtypefix",
+    "vllm_wheel_sha256": "b8ed2f89a59c810be5a6b13c54ab2ebb956770837119cef762a46e0607fc6941",
+    "b12x_commit": "97b3d642b8ce08ce23184a36882710ce3b60ba13",
+    "adaptive_mtp_source": {
+      "repo": "https://github.com/CosmicRaisins/glm-5.2-gb10",
+      "commit": "600848707ce93fe42fedbc9dd4429116696e425d",
+      "applied_verbatim": [
+        "adaptive-mtp/overlay/vllm/v1/spec_decode/dynamic/acceptance_length.py"
+      ],
+      "reconciled_not_verbatim": [
+        "patches/adaptive-mtp-vllm-hooks.patch: duplicate VLLM_ADAPTIVE_SPEC_DEPTHS parser replaced by one shared parser",
+        "patches/adaptive-mtp-vllm-hooks.patch: merged CUDA-graph candidate ranges replaced by layered (prepended) ranges"
+      ]
+    },
+    "sealed_manifest": "provenance/r9-postimage.sha256",
+    "sealed_manifest_entries": 35,
+    "publicly_rebuildable": false,
+    "publicly_rebuildable_reason": "The immediate build parent is a private image that has never been pushed to any registry; the full patch chain 03 -> 06 -> 12 -> 13 that produced it is not published here; and the original R6 base of that chain no longer exists anywhere. See docs/BUILD.md section 4."
+  },
+
+  "source_delta": {
+    "files_changed": 3,
+    "files_added": 2,
+    "files_removed": 0,
+    "files": [
+      {
+        "path": "vllm/v1/spec_decode/dynamic/acceptance_length.py",
+        "change": "replaced",
+        "sha256": "4b4e17521cb9bb22e2b8062e57f6bee43c170abc54d3b126bef409706cf3fbd9"
+      },
+      {
+        "path": "vllm/v1/spec_decode/dynamic/depth_ladder.py",
+        "change": "added",
+        "sha256": "674487015cd59f5528c98517276f59a5c78a79b510dc93e2ab06989b6a338e9f"
+      },
+      {
+        "path": "vllm/v1/worker/gpu/cudagraph_utils.py",
+        "change": "added-to-tracked-set",
+        "sha256": "7ce3dfb47a050b3cee7285f3ce796973b4fe285968bc78f35c86d2794044e454"
+      },
+      {
+        "path": "vllm/config/vllm.py",
+        "change": "changed",
+        "sha256": "9d90933ee15f382e87d60e2fa46919535f6d66c095c39a3cebef0ef1e53b9fd8"
+      },
+      {
+        "path": "vllm/v1/core/sched/scheduler.py",
+        "change": "changed",
+        "sha256": "c05eb6359230c7883b5a1a859db48c19a2d23a0c3a7bba9259ca6ae7d92d2723"
+      }
+    ]
+  },
+
+  "runtime": {
+    "nodes": 4,
+    "gb10_per_node": 1,
+    "tensor_parallel_size": 4,
+    "decode_context_parallel_size": 2,
+    "pipeline_parallel_size": 1,
+    "dcp_comm_backend": "a2a",
+    "attention_backend": "B12X_MLA_SPARSE",
+    "moe_backend": "flashinfer_cutlass",
+    "model_runner": "v2",
+    "quantization_weights": "compressed-tensors (Int4/Int8 mix, QuantTrio/GLM-5.2-Int4-Int8Mix)",
+    "kv_cache_dtype": "nvfp4_ds_mla",
+    "kv_cache_dtype_note": "NVFP4 applies to the KV cache, not to the model weights.",
+    "max_model_len": 520000,
+    "kv_cache_memory_bytes": 8410000000,
+    "measured_physical_kv_tokens": 525887,
+    "max_num_seqs": 3,
+    "max_num_batched_tokens": 1024,
+    "num_speculative_tokens": 5,
+    "adaptive_spec_depths": [2, 4, 5],
+    "adaptive_speculative_tokens_window": 32,
+    "cudagraph_mode": "FULL_AND_PIECEWISE",
+    "cudagraph_capture_sizes": [6, 12, 18],
+    "full_decode_shapes": [3, 6, 9, 5, 10, 15, 6, 12, 18],
+    "full_decode_query_lengths": [3, 5, 6],
+    "profiles": {
+      "520k": { "max_model_len": 520000, "kv_cache_memory_bytes": 8410000000, "measured_kv_tokens": 525887 },
+      "550k": { "max_model_len": 550000, "kv_cache_memory_bytes": 8850000000, "measured_kv_tokens": 553455 }
+    }
+  },
+
+  "measured_results": [
+    {
+      "name": "500k_cold_prompt_c1",
+      "profile": "520k",
+      "prompt_tokens": 500000,
+      "output_tokens": 128,
+      "prefill_tokens_per_second": 514.192,
+      "decode_tokens_per_second": 33.430,
+      "ttft_seconds": 973.196,
+      "end_to_end_seconds": 977.245,
+      "max_kv_occupancy_percent": 95.107,
+      "preemptions": 0,
+      "waiting_requests": 0,
+      "restarts": 0,
+      "fatal_gpu_or_driver_events": 0,
+      "caveat": "One isolated test at concurrency 1 on 4x DGX Spark (GB10, ARM64). Not an across-workload speed claim. Prefill rate is computed KV tokens divided by prefill seconds for this single request, not a sustained throughput figure."
+    },
+    {
+      "name": "500k_telemetry_window",
+      "profile": "520k",
+      "selected_k_window": { "5": 32 },
+      "context_tokens_min": 500012,
+      "context_tokens_max": 500078,
+      "acceptance_ratio": 0.8286,
+      "acceptance_ratio_denominator": "draft tokens actually offered for verification in the window",
+      "mean_accepted_per_batch": 4.143,
+      "output_tokens_emitted": 72,
+      "graph_fallback_markers": 0,
+      "caveat": "The controller held K5 throughout this window because tail positions were paying. It is a single 32-step window at 500K context, not a distribution over workloads."
+    },
+    {
+      "name": "controller_movement_short_run",
+      "profile": "550k",
+      "scheduler_steps_by_depth": { "2": 177, "4": 64, "5": 783 },
+      "measured_avg_selected_k": 4.256,
+      "fixed_k5_comparator_measured_avg_k_range": [4.965, 5.0],
+      "draft_positions_avoided_vs_fixed_k5_percent": 14.9,
+      "draft_batches": 2162,
+      "drafted_tokens": 9202,
+      "accepted_tokens": 6210,
+      "accepted_per_drafted_token": 0.675,
+      "mean_accepted_per_batch": 2.872,
+      "position_unconditional_gain": [0.895, 0.747, 0.483, 0.411, 0.335],
+      "full_graph_shapes_covered": 9,
+      "piecewise_downgrades": 0,
+      "caveat": "Measured over a 3 min 20 s live run on the 550K profile that ended in a host OOM kill unrelated to controller logic. 14.9 percent is a reduction in scheduled draft positions, NOT a decode-speed measurement. No matched K2-vs-K5 decode-rate sample exists."
+    },
+    {
+      "name": "graph_capture_cost",
+      "fixed_k5_predecessor": { "full_decode_shapes": 3, "capture_seconds": 3, "graph_pool_gib": 1.01 },
+      "r9_550k_profile": { "full_decode_shapes": 9, "capture_seconds": 8, "graph_pool_gib": 1.93 },
+      "r9_520k_profile": { "full_decode_shapes": 9, "capture_seconds": 24, "graph_pool_gib_range": [2.14, 2.25] },
+      "caveat": "Per rank. On unified-memory GB10 nodes with SwapTotal 0 this is the binding constraint; the 550K profile was OOM-killed on the head node under this graph set."
+    }
+  ],
+
+  "not_established": [
+    "That adaptive depth is faster than fixed K5 in tokens per second. No valid matched sample exists.",
+    "Any general decode-speed figure for this stack.",
+    "Any acceptance-rate target (for example >= 92 percent). This build makes such targets measurable; it does not measure them.",
+    "Depth-transition cost.",
+    "Whether the 2/4/5 thresholds, tuned upstream at max_num_seqs=1, behave the same at this deployment's max_num_seqs=3. This is the largest untested assumption.",
+    "Any behaviour on hardware other than 4x DGX Spark (GB10, sm_121a, ARM64)."
+  ],
+
+  "prior_releases": [
+    "https://github.com/0xdfi/GLM-5.2-1M-4x-DGX-Spark",
+    "https://huggingface.co/0xdfi/GLM-5.2-1M-context-NVFP4-4x-DGX-Spark",
+    "https://github.com/0xdfi/Keys-GLM-5.2-QuantTrio-655K-MTP-k5-4x-DGX-Spark",
+    "https://huggingface.co/0xdfi/GLM-5.2-QuantTrio-Abliterated"
+  ],
+
+  "upstreams": [
+    "https://github.com/CosmicRaisins/glm-5.2-gb10",
+    "https://github.com/local-inference-lab/vllm",
+    "https://github.com/lukealonso/b12x",
+    "https://github.com/flashinfer-ai/flashinfer",
+    "https://github.com/deepseek-ai/DeepGEMM",
+    "https://github.com/zyang-dev/nccl",
+    "https://github.com/eugr/spark-vllm-docker",
+    "https://github.com/vllm-project/vllm",
+    "https://huggingface.co/QuantTrio/GLM-5.2-Int4-Int8Mix",
+    "https://huggingface.co/zai-org/GLM-5.2",
+    "https://forums.developer.nvidia.com/t/glm-5-2-int4-int8-on-8x-gb10-1-200-t-s-prefill-33-54-t-s-avg-decode-generic-coding-structured/376831"
+  ],
+
+  "release": {
+    "github_release_tag": null,
+    "github_release_url": null,
+    "published_commit": null,
+    "published_at_utc": null,
+    "anonymous_pull_verified": null
+  },
+
+  "audit": {
+    "document": "IMAGE_AUDIT.md",
+    "verdict": "GO_WITH_DISCLOSED_RESIDUALS",
+    "secrets_found": 0,
+    "private_addresses_found": 0,
+    "model_weights_found": 0,
+    "residuals": [
+      "R-1 internal build hostname, in labels and embedded contract JSON",
+      "R-2 three private absolute home paths, in embedded contract JSON",
+      "R-3 the owner's first name, once, in embedded contract JSON",
+      "R-4 internal lineage labels, one of which (serving_status) is stale and now false"
+    ],
+    "owner_acceptance_required": true,
+    "owner_accepted": null,
+    "nvidia_container_license_obligations_documented": true
+  }
+}

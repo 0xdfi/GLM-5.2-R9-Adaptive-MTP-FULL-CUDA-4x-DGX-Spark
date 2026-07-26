@@ -1,0 +1,16 @@
+# Normalize line endings; these are Linux operational files.
+* text=auto eol=lf
+
+*.sh      text eol=lf
+*.py      text eol=lf
+*.md      text eol=lf
+*.json    text eol=lf
+*.yml     text eol=lf
+*.example text eol=lf
+
+# Checksum manifests must never be munged.
+provenance/*.sha256 text eol=lf
+
+# Keep large/derived artifacts out of language statistics and diffs.
+patches/13_r9_adaptive_full_cuda.py linguist-generated=false
+provenance/*.sha256 -diff linguist-generated=true

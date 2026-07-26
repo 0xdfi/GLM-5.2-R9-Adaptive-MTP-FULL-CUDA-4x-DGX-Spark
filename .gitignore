@@ -1,0 +1,42 @@
+# Operator-local configuration. NEVER commit: it carries your cluster's
+# addresses, interface names and host paths.
+runtime/r9.env
+runtime/*.env
+!runtime/r9.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.venv/
+venv/
+
+# Local scratch
+*.log
+*.tmp
+*.swp
+.DS_Store
+
+# Never commit images, weights or archives
+*.tar
+*.tar.gz
+*.tar.zst
+*.safetensors
+*.gguf
+*.bin
+*.pt
+
+# Never commit credentials of any kind
+.env
+.netrc
+.docker/
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# Mission result artifact; not part of the published repository.
+OPUS5_PUBLICATION_RESULT.json
