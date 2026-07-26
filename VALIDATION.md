@@ -48,8 +48,8 @@ What those tests actually assert:
   entries; the five R9 delta files' manifest digests equal the values in the image's
   own `org.glm52.exp1.*_sha256` labels; the included applier parses, names all five
   files, and preserves upstream attribution; the image guard parses and still asserts
-  the V2-runner exemption; `release-manifest.json` agrees with the manifest and keeps
-  the not-yet-known fields `null` rather than guessing them.
+  the V2-runner exemption; and `release-manifest.json` agrees with the manifest, leaves
+  the still-unknown GHCR digest `null`, and pins the verified public release fields exactly.
 * **Hygiene** — a credential-shape sweep over every file; a private-address sweep with
   **no exemptions at all**; an internal-hostname and username sweep with **no
   exemptions at all** (the audit documents use redacted placeholders instead); a

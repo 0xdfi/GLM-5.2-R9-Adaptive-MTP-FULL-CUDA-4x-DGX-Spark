@@ -1,13 +1,14 @@
-# Publishing runbook
+# Publication record and optional GHCR mirror
 
-For the operator performing the reviewed publication. Nothing in this document has been
-executed: no repository was created, no registry was logged into, no image was tagged or
-pushed, and no production state was changed.
+The canonical public release was completed on 2026-07-26 as a verified split Docker
+archive at [`r9-adaptive-full-bae57bd`](https://github.com/0xdfi/GLM-5.2-R9-Adaptive-MTP-FULL-CUDA-4x-DGX-Spark/releases/tag/r9-adaptive-full-bae57bd).
+A complete anonymous round trip on DGX Spark passed 19/19 deep image checks. The active
+GitHub CLI OAuth token did not have `write:packages`, so GHCR was not claimed or used.
 
-**Read [`IMAGE_AUDIT.md`](IMAGE_AUDIT.md) §3 and §4 first and make the two decisions it
-asks for.** Steps 3 onward are irreversible in practice — a 20 GB layer set pushed to a
-public registry may be mirrored, cached or indexed within minutes, and deleting the
-package later does not un-publish it.
+The commands below are retained as the reviewed procedure for adding an optional GHCR
+mirror of the **same exact image**. Steps 2 onward are irreversible in practice: a 20 GB
+layer set pushed to a public registry may be mirrored, cached or indexed within minutes,
+and deleting the package later does not un-publish it.
 
 Placeholders used below:
 
@@ -22,14 +23,14 @@ Placeholders used below:
 
 ## 0. Pre-flight decisions
 
-- [ ] Residuals R-1 … R-4 in [`IMAGE_AUDIT.md`](IMAGE_AUDIT.md) §3 accepted, **or** the
-      §6 sanitized route chosen instead (in which case stop and re-derive; this runbook
-      publishes the exact image).
-- [ ] The NVIDIA Deep Learning Container License position in
-      [`IMAGE_AUDIT.md`](IMAGE_AUDIT.md) §4 accepted.
-- [ ] Understood that pushing publishes the private parent image's **layer content**
+- [x] Residuals R-1 … R-4 in [`IMAGE_AUDIT.md`](IMAGE_AUDIT.md) §3 accepted by
+      the owner's explicit request to publish the current exact runtime image.
+- [x] The NVIDIA Deep Learning Container License position in
+      [`IMAGE_AUDIT.md`](IMAGE_AUDIT.md) §4 accepted for this release.
+- [x] Understood that publication exposes the private parent image's **layer content**
       (not a pullable tag for it) — [`IMAGE_AUDIT.md`](IMAGE_AUDIT.md) §5.
-- [ ] Sufficient upload bandwidth and time budgeted: ~20 GB from `<BUILD_HOST>`.
+- [x] Public artifact bandwidth and storage completed: 9,602,160,898-byte compressed
+      archive, split into five numbered assets.
 
 ---
 
