@@ -2,25 +2,20 @@
 
 ## 1. Public location
 
-```
-ghcr.io/0xdfi/glm-5.2-r9-adaptive-mtp-full-cuda-4x-dgx-spark
-```
-
-| Tag | Meaning | Stability |
-|---|---|---|
-| `r9-adaptive-full-bae57bd` | **the exact production image**, named for its source commit | immutable — this tag will never be re-pointed |
-| `r9` | convenience alias for the above | may move if a later R9 build is published |
-
-Recommended: **pin the digest**, not the tag.
+The canonical image artifact is the
+[`r9-adaptive-full-bae57bd` GitHub release](https://github.com/0xdfi/GLM-5.2-R9-Adaptive-MTP-FULL-CUDA-4x-DGX-Spark/releases/tag/r9-adaptive-full-bae57bd).
+It contains one zstd-compressed Docker archive split into five sub-2 GiB assets plus
+`SHA256SUMS`. The release tag is immutable and will not be re-pointed.
 
 ```bash
-docker pull ghcr.io/0xdfi/glm-5.2-r9-adaptive-mtp-full-cuda-4x-dgx-spark@sha256:<GHCR_DIGEST>
+./scripts/download-image.sh
+zstd -d -c image-download/glm52-r9-adaptive-full-bae57bd.oci.tar.zst | docker load
 ```
 
-`<GHCR_DIGEST>` is `null` in [`../release-manifest.json`](../release-manifest.json)
-until the image is actually pushed; the push step in
-[`../PUBLISHING.md`](../PUBLISHING.md) fills it in from the registry rather than from a
-local computation.
+The complete archive SHA-256 is
+`f1c8a209f503da0a76b655eeb38e4fa573f1408e25b3547b605fbec5e7a67dc4`.
+A future GHCR mirror may be added, but the downloadable release archive is the verified
+public distribution path for this release.
 
 ## 2. Facts that are already known and immutable
 
@@ -40,10 +35,10 @@ local computation.
 | CUDA | 13.0.2 |
 | Base | NVIDIA CUDA container, `ubuntu` 24.04, `sbsa` |
 
-## 3. Verify what you pulled
+## 3. Verify what you loaded
 
 ```bash
-./scripts/verify-image.sh ghcr.io/0xdfi/glm-5.2-r9-adaptive-mtp-full-cuda-4x-dgx-spark@sha256:<GHCR_DIGEST>
+./scripts/verify-image.sh glm52-exp1-sm121a-368-canary:r9-adaptive-full-bae57bd
 ```
 
 Checks performed:
@@ -57,26 +52,21 @@ Checks performed:
    `adaptive-mtp-full-cudagraphs` and `mtp-window-telemetry`;
 5. the `adaptive_mtp` label states the ladder `2,4,5` and the nine capture shapes;
 6. no model-weight artifacts are present (optional deep probe, `--deep`);
-7. the registry digest is reported **separately** from the local config ID, with an
-   explicit note that they are different hashes over different objects.
+7. the local Docker config ID is reported separately from the release archive SHA-256.
 
 Deeper source verification (35-file manifest, AST assertions) is in
 [`BUILD.md`](BUILD.md) §5.
 
-## 4. Image ID vs registry digest — do not confuse these
+## 4. Archive SHA-256 vs Docker image ID
 
-| Name | What it hashes | Where it comes from |
+| Name | What it hashes | Value |
 |---|---|---|
-| **Image ID** `sha256:50261a39…` | the image **config JSON** | computed locally by the Docker daemon |
-| **Registry digest** `…@sha256:…` | the **manifest** (or manifest list) as stored in the registry | assigned by the registry at push time; returned by `docker buildx imagetools inspect` or `docker inspect --format '{{index .RepoDigests 0}}'` after a push/pull |
+| **Archive SHA-256** | the complete zstd-compressed `docker save` archive published in five parts | `f1c8a209f503da0a76b655eeb38e4fa573f1408e25b3547b605fbec5e7a67dc4` |
+| **Docker image ID** | the image config JSON loaded into Docker | `sha256:50261a39caf7109bcf49e33fa29b1ba9f7dd630f7ac9eebef72d7994aa98ea39` |
 
-They are **not equal**, and neither can be derived from the other. Anything that tells
-you `docker inspect`'s `Id` is your pull digest is wrong.
-[`../scripts/verify-image.sh`](../scripts/verify-image.sh) prints both and labels them
-distinctly.
-
-Also note: before this image is pushed anywhere, `RepoDigests` is `[]` — the image has
-no digest at all. That is expected for a locally built image and is not a defect.
+They are different hashes over different objects. `scripts/download-image.sh` checks
+the first; `scripts/verify-image.sh` checks and reports the second. If a GHCR mirror is
+published later, its registry manifest digest will be a third distinct hash.
 
 ## 5. Running it
 
@@ -96,8 +86,8 @@ Minimum host requirements:
 ## 6. Non-goals
 
 * **No x86_64 image.** The stack is GB10/ARM64-specific.
-* **No multi-arch manifest list.** A single-platform `linux/arm64` manifest is
-  published.
+* **No registry mirror yet.** The canonical release artifact is the verified split Docker
+  archive; a GHCR mirror can be added later without changing these bytes.
 * **No signature or SBOM attestation at this time.** If either is added later it will be
   recorded in [`../release-manifest.json`](../release-manifest.json) and here.
 * **No bundled weights.** Deliberate — see [`../SECURITY.md`](../SECURITY.md) and

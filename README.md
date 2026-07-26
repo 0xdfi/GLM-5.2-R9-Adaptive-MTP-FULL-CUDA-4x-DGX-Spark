@@ -132,7 +132,7 @@ Artifacts:
 
 | Artifact | Where | Notes |
 |---|---|---|
-| Runtime container image | `ghcr.io/0xdfi/glm-5.2-r9-adaptive-mtp-full-cuda-4x-dgx-spark` | ARM64 only; weights not included |
+| Runtime container image | [GitHub release `r9-adaptive-full-bae57bd`](https://github.com/0xdfi/GLM-5.2-R9-Adaptive-MTP-FULL-CUDA-4x-DGX-Spark/releases/tag/r9-adaptive-full-bae57bd) | ARM64 only; weights not included; split archive with SHA-256 checksums |
 | Model weights | [`QuantTrio/GLM-5.2-Int4-Int8Mix`](https://huggingface.co/QuantTrio/GLM-5.2-Int4-Int8Mix) | download separately, accept upstream terms |
 | Launch templates | [`runtime/`](runtime/) | placeholders only; fail closed |
 | Verification | [`scripts/verify-image.sh`](scripts/verify-image.sh), [`scripts/smoke-openai.py`](scripts/smoke-openai.py) | |
@@ -141,29 +141,30 @@ Artifacts:
 
 ---
 
-## 3. Pull and run
+## 3. Download and run
 
-### 3.1 Pull
+### 3.1 Download and load
 
-```bash
-# Digest-pinned (preferred once the GHCR digest is published — see release-manifest.json)
-docker pull ghcr.io/0xdfi/glm-5.2-r9-adaptive-mtp-full-cuda-4x-dgx-spark@sha256:<GHCR_DIGEST>
-
-# Tag-pinned
-docker pull ghcr.io/0xdfi/glm-5.2-r9-adaptive-mtp-full-cuda-4x-dgx-spark:r9-adaptive-full-bae57bd
-```
-
-The image is **`linux/arm64` only**. It will not run on x86_64. Verify before you
-trust it:
+The exact Docker archive is published as five sub-2 GiB assets on the
+[`r9-adaptive-full-bae57bd` release](https://github.com/0xdfi/GLM-5.2-R9-Adaptive-MTP-FULL-CUDA-4x-DGX-Spark/releases/tag/r9-adaptive-full-bae57bd).
+The downloader resumes interrupted transfers, checks every part, reconstructs the
+archive, and verifies its full SHA-256:
 
 ```bash
-./scripts/verify-image.sh ghcr.io/0xdfi/glm-5.2-r9-adaptive-mtp-full-cuda-4x-dgx-spark@sha256:<GHCR_DIGEST>
+./scripts/download-image.sh
+zstd -d -c image-download/glm52-r9-adaptive-full-bae57bd.oci.tar.zst | docker load
+./scripts/verify-image.sh glm52-exp1-sm121a-368-canary:r9-adaptive-full-bae57bd
 ```
+
+Run the download/load procedure on each DGX Spark node that needs the local image.
+The image is **`linux/arm64` only** and will not run on x86_64. The archive contains
+the exact image whose Docker config ID is
+`sha256:50261a39caf7109bcf49e33fa29b1ba9f7dd630f7ac9eebef72d7994aa98ea39`.
 
 `verify-image.sh` checks architecture, OS, the expected `org.glm52.exp1.*` provenance
-labels, the adaptive-MTP capability string, and the absence of model weights. It
-reports the local Docker image config ID and the registry digest **separately** and
-does not claim they are the same value — they are not.
+labels, the adaptive-MTP capability string, and the absence of model weights. A future
+GHCR mirror would have a registry manifest digest distinct from the local Docker image
+config ID; this release does not pretend those hashes are interchangeable.
 
 ### 3.2 Prerequisite: download the model yourself
 
