@@ -40,7 +40,7 @@ VALID = {
     "NCCL_IB_HCA": "mlx5_0",
     "MODEL_DIR": "",          # filled in per-test with a real temp dir
     "JIT_CACHE_DIR": "",      # filled in per-test with a real temp dir
-    "R91_PROFILE": "balanced",
+    "R13_PROFILE": "balanced",
     "MAX_NUM_SEQS": "4",
     "MTP_K": "5",
     "VLLM_ADAPTIVE_SPEC_DEPTHS": "2,4,5",
@@ -161,14 +161,14 @@ class TestFailClosed(LauncherCase):
         self.assert_exit(10, MAX_NUM_SEQS="2")
 
     def test_10_max_num_seqs_three_is_rejected(self) -> None:
-        """R9 ran at C3; R9.1 requires C4. Three must now be refused."""
+        """R9 ran at C3; R13 requires C4. Three must now be refused."""
         self.assert_exit(10, MAX_NUM_SEQS="3")
 
     def test_10_max_num_seqs_zero_padded(self) -> None:
         self.assert_exit(10, MAX_NUM_SEQS="04")
 
     def test_12_unknown_profile(self) -> None:
-        proc = self.run_launcher(self.write_env(R91_PROFILE="1m"))
+        proc = self.run_launcher(self.write_env(R13_PROFILE="1m"))
         self.assertEqual(proc.returncode, 12, proc.stderr[:400])
         self.assertIn("matched triple", proc.stderr)
 
@@ -184,7 +184,7 @@ class TestValidRenderBalanced(LauncherCase):
         super().setUp()
         if not HAVE_DOCKER:
             self.skipTest("docker not on PATH; the launcher requires it for host preflight")
-        self.proc = self.run_launcher(self.write_env(R91_PROFILE="balanced"))
+        self.proc = self.run_launcher(self.write_env(R13_PROFILE="balanced"))
         self.assertEqual(self.proc.returncode, 0,
                          f"stderr: {self.proc.stderr[:600]}")
         self.out = self.proc.stdout
@@ -223,7 +223,7 @@ class TestValidRenderBalanced(LauncherCase):
         self.assertIn(":/models:ro", self.out.replace("\\", ""))
 
     def test_worker_does_not_render_an_api_server(self) -> None:
-        proc = self.run_launcher(self.write_env(R91_PROFILE="balanced"), role="worker")
+        proc = self.run_launcher(self.write_env(R13_PROFILE="balanced"), role="worker")
         self.assertEqual(proc.returncode, 0, proc.stderr[:400])
         self.assertNotIn("api_server", proc.stdout)
         self.assertIn("ray start --address", proc.stdout.replace("\\", ""))
@@ -251,8 +251,8 @@ class TestValidRenderBalanced(LauncherCase):
 
 
 class TestValidRenderFastDcp1Guard(LauncherCase):
-    """The core R9.1 fix: the fast (DCP1) profile must OMIT the DCP comm flags
-    that crash the engine on boot. This is the multi-process bug that R9.1 fixes."""
+    """The core R13 fix: the fast (DCP1) profile must OMIT the DCP comm flags
+    that crash the engine on boot. This is the multi-process bug that R13 fixes."""
 
     def setUp(self) -> None:
         super().setUp()
@@ -260,13 +260,13 @@ class TestValidRenderFastDcp1Guard(LauncherCase):
             self.skipTest("docker not on PATH; the launcher requires it for host preflight")
 
     def test_fast_renders_dcp1_without_comm_flags(self) -> None:
-        proc = self.run_launcher(self.write_env(R91_PROFILE="fast"))
+        proc = self.run_launcher(self.write_env(R13_PROFILE="fast"))
         self.assertEqual(proc.returncode, 0, proc.stderr[:600])
         flat = proc.stdout.replace("\\", "")
         self.assertIn("--decode-context-parallel-size 1", flat)
         self.assertIn("--max-model-len 319000", flat)
         self.assertIn("--kv-cache-memory-bytes 10233000000", flat)
-        # The whole point of R9.1: DCP1 must NOT carry the comm flags.
+        # The whole point of R13: DCP1 must NOT carry the comm flags.
         self.assertNotIn("--dcp-comm-backend", flat)
         self.assertNotIn("--dcp-kv-cache-interleave-size", flat)
 
@@ -274,7 +274,7 @@ class TestValidRenderFastDcp1Guard(LauncherCase):
         """Both profiles are C4 and must render the same twelve-shape set."""
         for profile in ("fast", "balanced"):
             with self.subTest(profile=profile):
-                proc = self.run_launcher(self.write_env(R91_PROFILE=profile))
+                proc = self.run_launcher(self.write_env(R13_PROFILE=profile))
                 self.assertEqual(proc.returncode, 0, proc.stderr[:400])
                 flat = proc.stdout.replace("\\", "")
                 self.assertIn("6,12,18,24", flat)

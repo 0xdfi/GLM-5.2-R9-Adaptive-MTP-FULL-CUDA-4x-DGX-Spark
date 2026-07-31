@@ -1,8 +1,8 @@
 # Runtime templates
 
-Public, placeholder-only launch templates for the four-node GLM-5.2 R9.1 runtime.
+Public, placeholder-only launch templates for the four-node GLM-5.2 R13 runtime.
 
-R9.1 supersedes R9. The change set: two named profiles (`fast` / `balanced`),
+R13 supersedes R9. The change set: two named profiles (`fast` / `balanced`),
 both at C4 concurrency (four lanes, twelve-shape FULL-graph capture set
 `6,12,18,24`), and a DCP-comm-arg guard that lets the DCP1 `fast` profile boot
 clean. See [`../RELEASE_NOTES.md`](../RELEASE_NOTES.md) for the full changelog and
@@ -47,13 +47,13 @@ comparable:
 | 8 | MTP telemetry disabled, or a malformed instrumentation window |
 | 10 | `MAX_NUM_SEQS` is anything other than exactly `4` |
 | 11 | any required variable is unset, empty, or still contains a `<...>` placeholder |
-| 12 | `R91_PROFILE` is not one of the authorized named profiles (`fast` / `balanced`) |
+| 12 | `R13_PROFILE` is not one of the authorized named profiles (`fast` / `balanced`) |
 | 13 | a host precondition fails (missing model directory, missing cache directory, no `docker`) |
 
 Note: `--decode-context-parallel-size` is derived from the profile (`fast`=1,
 `balanced`=2). The launcher emits `--dcp-comm-backend` / `--dcp-kv-cache-interleave-size`
 **only** at DCP>1; at DCP1 (fast) those flags are omitted because passing them
-crashes the R9.1 engine on boot. This is the core R9.1 fix.
+crashes the R13 engine on boot. This is the core R13 fix.
 
 None of these is stylistic. `MAX_NUM_SEQS` is the multiplier that defines the
 twelve-shape FULL-graph coverage set, and the server's own load-time assertion will refuse
@@ -84,7 +84,7 @@ container. Read [`../SECURITY.md`](../SECURITY.md) before exposing anything.
 ## Envelope changes
 
 Context window, KV budget and DCP size are a matched triple and are selected by
-**named profile**, not passed independently. R9.1 ships two profiles:
+**named profile**, not passed independently. R13 ships two profiles:
 
 | Profile | `max_model_len` | KV budget / rank | DCP | Context ceiling | Character |
 |---|---|---|---|---|---|

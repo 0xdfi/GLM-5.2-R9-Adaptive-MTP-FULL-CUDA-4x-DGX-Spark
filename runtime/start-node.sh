@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# GLM-5.2 R9.1 adaptive-MTP / FULL-CUDA — public four-node launch template.
+# GLM-5.2 R13 adaptive-MTP / FULL-CUDA — public four-node launch template.
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -13,7 +13,7 @@
 # is a function of the ladder and MAX_NUM_SEQS, and the load-time assertion
 # inside the server will refuse to start if they disagree.
 #
-# R9.1 vs R9: concurrency 3 -> 4 (twelve-shape capture set [6,12,18,24]) and a
+# R13 vs R9: concurrency 3 -> 4 (twelve-shape capture set [6,12,18,24]) and a
 # DCP-comm-arg guard so a DCP1 (fast) profile boots clean. Both profiles share one
 # image; the profile selects the context/KV/DCP envelope. See RELEASE_NOTES.md.
 #
@@ -50,7 +50,7 @@ REQUIRED_VARS=(
   HEAD_NODE_IP NODE_IP RAY_PORT API_BIND_ADDR API_PORT
   NCCL_SOCKET_IFNAME GLOO_SOCKET_IFNAME NCCL_IB_HCA
   MODEL_DIR JIT_CACHE_DIR
-  R91_PROFILE MAX_NUM_SEQS MTP_K VLLM_ADAPTIVE_SPEC_DEPTHS ADAPTIVE_SPEC_WINDOW
+  R13_PROFILE MAX_NUM_SEQS MTP_K VLLM_ADAPTIVE_SPEC_DEPTHS ADAPTIVE_SPEC_WINDOW
   CUDAGRAPH_SIZES VLLM_MTP_INSTRUMENT VLLM_MTP_INSTRUMENT_WINDOW
   MAX_NUM_BATCHED_TOKENS LONG_PREFILL_TOKEN_THRESHOLD
   DECODE_PREFILL_TOKEN_BUDGET IDLE_PREFILL_TOKEN_BUDGET
@@ -119,7 +119,7 @@ MAX_SHAPE=$(( (MTP_K + 1) * MAX_NUM_SEQS ))
 # buys, and the byte budget must leave enough unified memory for the twelve-shape
 # FULL graph capture. The profile also fixes DCP_SIZE; see the DCP guard below.
 # -------------------------------------------------------------------------- #
-case "$R91_PROFILE" in
+case "$R13_PROFILE" in
   fast)
     MAX_MODEL_LEN=319000
     KV_CACHE_MEMORY_BYTES=10233000000
@@ -132,9 +132,9 @@ case "$R91_PROFILE" in
     ;;
   *)
     cat >&2 <<'GATE'
-refusing to run: R91_PROFILE must be one of the authorized named profiles.
+refusing to run: R13_PROFILE must be one of the authorized named profiles.
 
-R9.1 ships two matched envelopes. context, KV budget and DCP size are a
+R13 ships two matched envelopes. context, KV budget and DCP size are a
 matched triple, not three knobs: the context must sit below the KV capacity
 the byte budget buys, and the byte budget must leave enough unified memory for
 the twelve-shape FULL graph capture.
@@ -163,7 +163,7 @@ esac
 # DCP comm backend is only valid for DCP>1.
 # Newer vLLM rejects an explicit --dcp-comm-backend at
 # decode-context-parallel-size 1 (it would crash the engine on boot). DCP1 omits
-# both DCP comm flags entirely; DCP2 passes them. This is the R9.1 fix.
+# both DCP comm flags entirely; DCP2 passes them. This is the R13 fix.
 # -------------------------------------------------------------------------- #
 if [[ "${DCP_SIZE}" -gt 1 ]]; then
   [[ -n "$DCP_COMM_BACKEND" ]] \

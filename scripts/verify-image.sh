@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Verify a pulled GLM-5.2 R9 adaptive-MTP / FULL-CUDA image.
+# Verify a pulled GLM-5.2 R13 adaptive-MTP / FULL-CUDA image.
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -9,6 +9,14 @@
 #
 # Checks architecture, OS, the expected OCI/provenance labels, the adaptive-MTP
 # capability strings, and (with --deep) the absence of model weights.
+#
+# NAMING / LINEAGE: this is the R13 public release. The image it verifies was
+# built and tagged internally as `r9.1-scheduler-liveness-4lane` (its
+# `org.glm52.exp1.revision` label, which is what docker inspect returns and what
+# EXP_REVISION below pins). The C4 / twelve-shape behavior is a runtime
+# configuration applied by start-node.sh, not an image rebuild, so the image's
+# baked-in labels still describe the C3 nine-shape set and this script accounts
+# for that. The image ID (sha256:6d7b06b1…) is the integrity anchor.
 #
 # HONESTY NOTE, deliberately not softened: the local Docker image ID is the hash
 # of the image CONFIG and is computed locally. The registry digest
@@ -33,17 +41,26 @@ PASS=0; FAIL=0
 ok()   { printf '  \033[32mPASS\033[0m  %s\n' "$1"; PASS=$((PASS+1)); }
 bad()  { printf '  \033[31mFAIL\033[0m  %s\n' "$1"; FAIL=$((FAIL+1)); }
 note() { printf '  ....  %s\n' "$1"; }
-
 # --- expected values, from the sealed build ---------------------------------
+# R13 public release. The image's INTERNAL build tag is r9.1-scheduler-liveness
+# 4lane (its org.glm52.exp1.revision label); EXP_REVISION pins that exact string
+# because it is what `docker inspect` returns and what this script checks against.
+# The image is built on the SAME source commit as R9 (bae57bd); the source tree,
+# Dockerfile, build script and contract are byte-identical to the R9 build. What
+# changed is the revision label, the parent (this image layers on top of the R9
+# image, which is itself layered on the R8 base), and the resulting image ID. The
+# C4/twelve-shape behavior is a RUNTIME configuration applied by start-node.sh,
+# not a rebuild — the baked-in adaptive_mtp / capabilities labels still describe
+# the C3 nine-shape set. The image ID (sha256:6d7b06b1…) is the true anchor.
 EXP_ARCH="arm64"
 EXP_OS="linux"
 EXP_SOURCE_COMMIT="bae57bd87b03b7c802ca391064996ec27a02d2bb"
 EXP_DOCKERFILE_SHA="0758f672f797fe0c2f4812170511821e20384c0d5e0f2e18a8f68df858199a1d"
 EXP_BUILD_SCRIPT_SHA="620cee21545dd570c8664c169214def0dadb453b76272ca5b9b72ccefa2a4633"
 EXP_CONTRACT_SHA="1b6f00259724f86eb58c047373dabeb9b4df21a1b7bd87995c09e6cfa16bfd77"
-EXP_PARENT_IMAGE_ID="sha256:7cc2e13a5f6504bdc31dd173f637239ae587e928b06410dcc8b0d29232a9cb2c"
-EXP_REVISION="r9-adaptive-full-cuda"
-EXP_LOCAL_IMAGE_ID="sha256:50261a39caf7109bcf49e33fa29b1ba9f7dd630f7ac9eebef72d7994aa98ea39"
+EXP_PARENT_IMAGE_ID="sha256:50261a39caf7109bcf49e33fa29b1ba9f7dd630f7ac9eebef72d7994aa98ea39"
+EXP_REVISION="r9.1-scheduler-liveness-4lane"
+EXP_LOCAL_IMAGE_ID="sha256:6d7b06b13f3839da8d9a447e560ba51a894385d52ca052a6f9af24d072d94e82"
 
 echo "== image =="
 note "ref: $IMAGE_REF"
