@@ -13,6 +13,16 @@ Everything below that is presented as a number was measured on real hardware and
 traceable to a receipt. Everything that was *not* measured is called out as not
 measured. See [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md) for the full denominators.
 
+> **Status (2026-07-31).** The launch templates in [`runtime/`](runtime/) have been
+> updated to **R9.1**: two named profiles (`fast`, `balanced`), both at C4 concurrency
+> (`max_num_seqs=4`), with a launcher guard that fixes a DCP1 boot crash. The R9.1
+> profiles and their twelve-shape FULL-graph coverage set are documented in
+> [`runtime/README.md`](runtime/README.md). The **downloadable container image is still
+> R9** (`sha256:50261a39…`, C3, nine-shape coverage) — the numbers and architecture
+> matrix below describe that published R9 image and remain accurate for it. The R9.1
+> image and its measured numbers will be published separately; until then the runtime
+> templates carry the R9.1 recipe and the rest of the repository carries the R9 image.
+
 ---
 
 ## 1. The headline: adaptive MTP that keeps FULL CUDA graphs

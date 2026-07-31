@@ -1,6 +1,12 @@
 # Runtime templates
 
-Public, placeholder-only launch templates for the four-node GLM-5.2 R9 runtime.
+Public, placeholder-only launch templates for the four-node GLM-5.2 R9.1 runtime.
+
+R9.1 supersedes R9. The change set: two named profiles (`fast` / `balanced`),
+both at C4 concurrency (four lanes, twelve-shape FULL-graph capture set
+`6,12,18,24`), and a DCP-comm-arg guard that lets the DCP1 `fast` profile boot
+clean. See [`../RELEASE_NOTES.md`](../RELEASE_NOTES.md) for the full changelog and
+[`../docs/BENCHMARKS.md`](../docs/BENCHMARKS.md) for the measured tradeoffs.
 
 | File | Purpose |
 |---|---|
@@ -37,15 +43,20 @@ comparable:
 | 4 | `ADAPTIVE_SPEC_WINDOW` is not a bare positive integer — `08` is valid bash and invalid JSON, so a leading zero is rejected on purpose |
 | 5 | `VLLM_ADAPTIVE_SPEC_DEPTHS` does not normalise to exactly `2,4,5` |
 | 6 | the ladder's top rung is not `MTP_K`, or `MTP_K != 5` |
-| 7 | `ENFORCE_EAGER=1`, or `CUDAGRAPH_SIZES` is not the qualified `6,12,18`, or the largest reachable shape exceeds the largest capture size |
+| 7 | `ENFORCE_EAGER=1`, or `CUDAGRAPH_SIZES` is not the qualified `6,12,18,24`, or the largest reachable shape exceeds the largest capture size |
 | 8 | MTP telemetry disabled, or a malformed instrumentation window |
-| 10 | `MAX_NUM_SEQS` is anything other than exactly `3` |
+| 10 | `MAX_NUM_SEQS` is anything other than exactly `4` |
 | 11 | any required variable is unset, empty, or still contains a `<...>` placeholder |
-| 12 | `R9_PROFILE` is not one of the authorized named `max_model_len`/`kv_cache_memory_bytes` pairs |
+| 12 | `R91_PROFILE` is not one of the authorized named profiles (`fast` / `balanced`) |
 | 13 | a host precondition fails (missing model directory, missing cache directory, no `docker`) |
 
+Note: `--decode-context-parallel-size` is derived from the profile (`fast`=1,
+`balanced`=2). The launcher emits `--dcp-comm-backend` / `--dcp-kv-cache-interleave-size`
+**only** at DCP>1; at DCP1 (fast) those flags are omitted because passing them
+crashes the R9.1 engine on boot. This is the core R9.1 fix.
+
 None of these is stylistic. `MAX_NUM_SEQS` is the multiplier that defines the
-nine-shape FULL-graph coverage set, and the server's own load-time assertion will refuse
+twelve-shape FULL-graph coverage set, and the server's own load-time assertion will refuse
 to start if the launcher and the graph layer disagree — so the launcher refuses first,
 before a maintenance window has been opened.
 
@@ -72,11 +83,17 @@ container. Read [`../SECURITY.md`](../SECURITY.md) before exposing anything.
 
 ## Envelope changes
 
-`max_model_len` and `kv_cache_memory_bytes` are a matched pair and are selected by
-**named profile**, not passed independently. `520k` is the qualified, currently-live
-envelope. `550k` is the prior envelope, under which the head node was OOM-killed by the
-Linux kernel with the nine-shape FULL graph set — read
-[`../docs/BENCHMARKS.md`](../docs/BENCHMARKS.md) §5 before choosing it.
+Context window, KV budget and DCP size are a matched triple and are selected by
+**named profile**, not passed independently. R9.1 ships two profiles:
+
+| Profile | `max_model_len` | KV budget / rank | DCP | Context ceiling | Character |
+|---|---|---|---|---|---|
+| `fast` | 319000 | 10.23 GB | 1 (none) | 319k | Short-context throughput. Highest prefill and C4-aggregate; lowest prose-decode C1. |
+| `balanced` | 520000 | 8.41 GB | 2 (`a2a`) | 520k | Long-context capacity. Faster prose-decode C1; lower C4-aggregate. |
+
+Both are C4. The R9 `520k`/`550k` pair and the R9 image (`sha256:50261a39…`) are
+superseded — `550k` was the envelope under which the head node was OOM-killed by the
+Linux kernel. Read [`../docs/BENCHMARKS.md`](../docs/BENCHMARKS.md) §5 for the history.
 
 Raising `MAX_NUM_BATCHED_TOKENS`, `kv_cache_memory_bytes` or `MAX_NUM_SEQS` on
 unified-memory GB10 nodes with no swap is not a tuning exercise; the measured host

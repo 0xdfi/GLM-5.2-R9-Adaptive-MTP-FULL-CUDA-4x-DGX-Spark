@@ -40,12 +40,12 @@ VALID = {
     "NCCL_IB_HCA": "mlx5_0",
     "MODEL_DIR": "",          # filled in per-test with a real temp dir
     "JIT_CACHE_DIR": "",      # filled in per-test with a real temp dir
-    "R9_PROFILE": "520k",
-    "MAX_NUM_SEQS": "3",
+    "R91_PROFILE": "balanced",
+    "MAX_NUM_SEQS": "4",
     "MTP_K": "5",
     "VLLM_ADAPTIVE_SPEC_DEPTHS": "2,4,5",
     "ADAPTIVE_SPEC_WINDOW": "32",
-    "CUDAGRAPH_SIZES": "6,12,18",
+    "CUDAGRAPH_SIZES": "6,12,18,24",
     "VLLM_MTP_INSTRUMENT": "1",
     "VLLM_MTP_INSTRUMENT_WINDOW": "32",
     "MAX_NUM_BATCHED_TOKENS": "1024",
@@ -54,7 +54,6 @@ VALID = {
     "IDLE_PREFILL_TOKEN_BUDGET": "1024",
     "MAX_LONG_PREFILLS_PER_STEP": "1",
     "TENSOR_PARALLEL_SIZE": "4",
-    "DECODE_CONTEXT_PARALLEL_SIZE": "2",
     "PIPELINE_PARALLEL_SIZE": "1",
     "DCP_COMM_BACKEND": "a2a",
     "SERVED_MODEL_NAME": "glm-5.2",
@@ -158,30 +157,34 @@ class TestFailClosed(LauncherCase):
     def test_8_malformed_instrument_window(self) -> None:
         self.assert_exit(8, VLLM_MTP_INSTRUMENT_WINDOW="0x20")
 
-    def test_10_max_num_seqs_other_than_three(self) -> None:
+    def test_10_max_num_seqs_other_than_four(self) -> None:
         self.assert_exit(10, MAX_NUM_SEQS="2")
 
+    def test_10_max_num_seqs_three_is_rejected(self) -> None:
+        """R9 ran at C3; R9.1 requires C4. Three must now be refused."""
+        self.assert_exit(10, MAX_NUM_SEQS="3")
+
     def test_10_max_num_seqs_zero_padded(self) -> None:
-        self.assert_exit(10, MAX_NUM_SEQS="03")
+        self.assert_exit(10, MAX_NUM_SEQS="04")
 
     def test_12_unknown_profile(self) -> None:
-        proc = self.run_launcher(self.write_env(R9_PROFILE="1m"))
+        proc = self.run_launcher(self.write_env(R91_PROFILE="1m"))
         self.assertEqual(proc.returncode, 12, proc.stderr[:400])
-        self.assertIn("matched pair", proc.stderr)
+        self.assertIn("matched triple", proc.stderr)
 
     def test_13_missing_model_dir(self) -> None:
         proc = self.run_launcher(self.write_env(MODEL_DIR=str(self.tmp / "nope")))
         self.assertEqual(proc.returncode, 13, proc.stderr[:400])
 
 
-class TestValidRender(LauncherCase):
-    """A valid configuration renders, and what it renders carries the invariants."""
+class TestValidRenderBalanced(LauncherCase):
+    """A valid balanced (DCP2) configuration renders, and carries the invariants."""
 
     def setUp(self) -> None:
         super().setUp()
         if not HAVE_DOCKER:
             self.skipTest("docker not on PATH; the launcher requires it for host preflight")
-        self.proc = self.run_launcher(self.write_env())
+        self.proc = self.run_launcher(self.write_env(R91_PROFILE="balanced"))
         self.assertEqual(self.proc.returncode, 0,
                          f"stderr: {self.proc.stderr[:600]}")
         self.out = self.proc.stdout
@@ -189,6 +192,13 @@ class TestValidRender(LauncherCase):
     def test_renders_the_qualified_profile(self) -> None:
         self.assertIn("--max-model-len 520000", self.out.replace("\\", ""))
         self.assertIn("--kv-cache-memory-bytes 8410000000", self.out.replace("\\", ""))
+
+    def test_renders_dcp2_with_comm_backend(self) -> None:
+        """Balanced is DCP2: the comm-backend and interleave flags must be present."""
+        flat = self.out.replace("\\", "")
+        self.assertIn("--decode-context-parallel-size 2", flat)
+        self.assertIn("--dcp-comm-backend a2a", flat)
+        self.assertIn("--dcp-kv-cache-interleave-size 1", flat)
 
     def test_renders_the_adaptive_speculative_config(self) -> None:
         flat = self.out.replace("\\", "")
@@ -199,7 +209,7 @@ class TestValidRender(LauncherCase):
     def test_renders_full_graph_capture_sizes(self) -> None:
         flat = self.out.replace("\\", "")
         self.assertIn("cudagraph_capture_sizes", flat)
-        self.assertIn("6,12,18", flat)
+        self.assertIn("6,12,18,24", flat)
 
     def test_does_not_render_enforce_eager(self) -> None:
         self.assertNotIn("--enforce-eager", self.out)
@@ -213,7 +223,7 @@ class TestValidRender(LauncherCase):
         self.assertIn(":/models:ro", self.out.replace("\\", ""))
 
     def test_worker_does_not_render_an_api_server(self) -> None:
-        proc = self.run_launcher(self.write_env(), role="worker")
+        proc = self.run_launcher(self.write_env(R91_PROFILE="balanced"), role="worker")
         self.assertEqual(proc.returncode, 0, proc.stderr[:400])
         self.assertNotIn("api_server", proc.stdout)
         self.assertIn("ray start --address", proc.stdout.replace("\\", ""))
@@ -238,6 +248,37 @@ class TestValidRender(LauncherCase):
         self.assertEqual(cfg["num_speculative_tokens"], 5)
         self.assertEqual(cfg["adaptive_speculative_tokens_window"], 32)
         self.assertEqual(cfg["method"], "mtp")
+
+
+class TestValidRenderFastDcp1Guard(LauncherCase):
+    """The core R9.1 fix: the fast (DCP1) profile must OMIT the DCP comm flags
+    that crash the engine on boot. This is the multi-process bug that R9.1 fixes."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        if not HAVE_DOCKER:
+            self.skipTest("docker not on PATH; the launcher requires it for host preflight")
+
+    def test_fast_renders_dcp1_without_comm_flags(self) -> None:
+        proc = self.run_launcher(self.write_env(R91_PROFILE="fast"))
+        self.assertEqual(proc.returncode, 0, proc.stderr[:600])
+        flat = proc.stdout.replace("\\", "")
+        self.assertIn("--decode-context-parallel-size 1", flat)
+        self.assertIn("--max-model-len 319000", flat)
+        self.assertIn("--kv-cache-memory-bytes 10233000000", flat)
+        # The whole point of R9.1: DCP1 must NOT carry the comm flags.
+        self.assertNotIn("--dcp-comm-backend", flat)
+        self.assertNotIn("--dcp-kv-cache-interleave-size", flat)
+
+    def test_fast_and_balanced_render_identical_capture_set(self) -> None:
+        """Both profiles are C4 and must render the same twelve-shape set."""
+        for profile in ("fast", "balanced"):
+            with self.subTest(profile=profile):
+                proc = self.run_launcher(self.write_env(R91_PROFILE=profile))
+                self.assertEqual(proc.returncode, 0, proc.stderr[:400])
+                flat = proc.stdout.replace("\\", "")
+                self.assertIn("6,12,18,24", flat)
+                self.assertIn("--max-num-seqs 4", flat)
 
 
 class TestExampleEnvCoversEveryRequiredVar(LauncherCase):
