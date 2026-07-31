@@ -13,6 +13,25 @@ Everything below that is presented as a number was measured on real hardware and
 traceable to a receipt. Everything that was *not* measured is called out as not
 measured. See [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md) for the full denominators.
 
+> **Status (2026-07-31).** The launch templates in [`runtime/`](runtime/) and the
+> downloadable container image have both been updated to **R13**:
+> - **Runtime templates** (`r9.env.example`, `start-node.sh`): two named profiles
+>   (`fast`, `balanced`), both at C4 concurrency (`max_num_seqs=4`), with a launcher
+>   guard that fixes a DCP1 boot crash and a twelve-shape FULL-graph coverage set
+>   (`6,12,18,24`). Documented in [`runtime/README.md`](runtime/README.md).
+> - **Container image** (release `r13-balanced-fast-c4`, image
+>   `sha256:6d7b06b1…`, 20.3 GB, ARM64): published as a GitHub release. Download with
+>   [`scripts/download-image.sh`](scripts/download-image.sh) and verify with
+>   [`scripts/verify-image.sh`](scripts/verify-image.sh) before load.
+>
+> The R13 image's internal build tag is `r9.1-scheduler-liveness-4lane` (its
+> `org.glm52.exp1.revision` label); the public release is named R13. The C4
+> / twelve-shape behavior is a runtime configuration applied by `start-node.sh`, not an
+> image rebuild — the image's baked-in provenance and capability labels therefore still
+> describe the C3 nine-shape set, and `verify-image.sh` accounts for this. Measured
+> Fast/Balanced performance numbers are in [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md).
+> The legacy R9 image release remains available as `r9-adaptive-full-bae57bd`.
+
 ---
 
 ## 1. The headline: adaptive MTP that keeps FULL CUDA graphs

@@ -2,16 +2,15 @@
 set -euo pipefail
 
 REPO="0xdfi/GLM-5.2-R9-Adaptive-MTP-FULL-CUDA-4x-DGX-Spark"
-TAG="r9-adaptive-full-bae57bd"
+TAG="r13-balanced-fast-c4"
 BASE="https://github.com/${REPO}/releases/download/${TAG}"
 OUT_DIR="${1:-image-download}"
-ARCHIVE="glm52-r9-adaptive-full-bae57bd.oci.tar.zst"
+ARCHIVE="glm52-r13-balanced-fast-c4.oci.tar.zst"
 PARTS=(
   "${ARCHIVE}.part-00.bin"
   "${ARCHIVE}.part-01.bin"
   "${ARCHIVE}.part-02.bin"
   "${ARCHIVE}.part-03.bin"
-  "${ARCHIVE}.part-04.bin"
 )
 
 command -v curl >/dev/null || { echo "curl is required" >&2; exit 1; }

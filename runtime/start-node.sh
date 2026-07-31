@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# GLM-5.2 R9 adaptive-MTP / FULL-CUDA — public four-node launch template.
+# GLM-5.2 R13 adaptive-MTP / FULL-CUDA — public four-node launch template.
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -9,9 +9,13 @@
 #
 # This script FAILS CLOSED. It renders nothing and launches nothing unless every
 # placeholder is replaced and every invariant of the qualified runtime holds.
-# The invariants are not stylistic: the nine-shape FULL CUDA graph coverage set
+# The invariants are not stylistic: the twelve-shape FULL CUDA graph coverage set
 # is a function of the ladder and MAX_NUM_SEQS, and the load-time assertion
 # inside the server will refuse to start if they disagree.
+#
+# R13 vs R9: concurrency 3 -> 4 (twelve-shape capture set [6,12,18,24]) and a
+# DCP-comm-arg guard so a DCP1 (fast) profile boots clean. Both profiles share one
+# image; the profile selects the context/KV/DCP envelope. See RELEASE_NOTES.md.
 #
 # It is a TEMPLATE. It is deliberately smaller than the production launcher,
 # which additionally owns container preservation, a rollback transaction and a
@@ -46,12 +50,12 @@ REQUIRED_VARS=(
   HEAD_NODE_IP NODE_IP RAY_PORT API_BIND_ADDR API_PORT
   NCCL_SOCKET_IFNAME GLOO_SOCKET_IFNAME NCCL_IB_HCA
   MODEL_DIR JIT_CACHE_DIR
-  R9_PROFILE MAX_NUM_SEQS MTP_K VLLM_ADAPTIVE_SPEC_DEPTHS ADAPTIVE_SPEC_WINDOW
+  R13_PROFILE MAX_NUM_SEQS MTP_K VLLM_ADAPTIVE_SPEC_DEPTHS ADAPTIVE_SPEC_WINDOW
   CUDAGRAPH_SIZES VLLM_MTP_INSTRUMENT VLLM_MTP_INSTRUMENT_WINDOW
   MAX_NUM_BATCHED_TOKENS LONG_PREFILL_TOKEN_THRESHOLD
   DECODE_PREFILL_TOKEN_BUDGET IDLE_PREFILL_TOKEN_BUDGET
   MAX_LONG_PREFILLS_PER_STEP
-  TENSOR_PARALLEL_SIZE DECODE_CONTEXT_PARALLEL_SIZE PIPELINE_PARALLEL_SIZE
+  TENSOR_PARALLEL_SIZE PIPELINE_PARALLEL_SIZE
   DCP_COMM_BACKEND SERVED_MODEL_NAME
 )
 for v in "${REQUIRED_VARS[@]}"; do
@@ -87,8 +91,8 @@ LADDER_TOP="${LADDER_NORM##*,}"
 [[ "${ENFORCE_EAGER:-0}" == "0" ]] \
   || die "ENFORCE_EAGER=1 defeats the entire point of this build" 7
 
-[[ "$MAX_NUM_SEQS" == "3" ]] \
-  || die "MAX_NUM_SEQS must be exactly 3; it defines the nine-shape FULL graph coverage set" 10
+[[ "$MAX_NUM_SEQS" == "4" ]] \
+  || die "MAX_NUM_SEQS must be exactly 4; it defines the twelve-shape FULL graph coverage set" 10
 
 is_bare_positive_int "$VLLM_MTP_INSTRUMENT_WINDOW" \
   || die "VLLM_MTP_INSTRUMENT_WINDOW must be a bare positive integer" 8
@@ -96,42 +100,79 @@ is_bare_positive_int "$VLLM_MTP_INSTRUMENT_WINDOW" \
   || die "MTP telemetry is mandatory in this build" 8
 
 # Gate 7 — the capture sizes must cover every (depth+1) x n shape.
-# ladder 2,4,5 and MAX_NUM_SEQS=3 give query lengths 3,5,6 and the nine shapes
-# 3/6/9, 5/10/15, 6/12/18. vLLM captures per uniform query length, so what the
-# launcher must guarantee is that the largest shape fits the largest capture
-# size and that the capture list is exactly the qualified set.
+# ladder 2,4,5 and MAX_NUM_SEQS=4 give query lengths 3,5,6 and the twelve shapes
+# 3/6/9/12, 5/10/15/20, 6/12/18/24. vLLM captures per uniform query length, so
+# what the launcher must guarantee is that the largest shape fits the largest
+# capture size and that the capture list is exactly the qualified set.
 CAPTURE_NORM="$(printf '%s' "$CUDAGRAPH_SIZES" | tr -d '[:space:]')"
-[[ "$CAPTURE_NORM" == "6,12,18" ]] \
-  || die "CUDAGRAPH_SIZES must be exactly '6,12,18' for the qualified nine-shape set (got '$CAPTURE_NORM')" 7
+[[ "$CAPTURE_NORM" == "6,12,18,24" ]] \
+  || die "CUDAGRAPH_SIZES must be exactly '6,12,18,24' for the qualified twelve-shape set (got '$CAPTURE_NORM')" 7
 
 MAX_CAPTURE="${CAPTURE_NORM##*,}"
 MAX_SHAPE=$(( (MTP_K + 1) * MAX_NUM_SEQS ))
 (( MAX_SHAPE <= MAX_CAPTURE )) \
   || die "largest reachable shape ($MAX_SHAPE) exceeds max capture size ($MAX_CAPTURE)" 7
 
-# --------------------------------------------------------------------------
-# Profile resolution — max_model_len and kv_cache_memory_bytes are a pair.
-# --------------------------------------------------------------------------
-case "$R9_PROFILE" in
-  520k) MAX_MODEL_LEN=520000; KV_CACHE_MEMORY_BYTES=8410000000 ;;
-  550k) MAX_MODEL_LEN=550000; KV_CACHE_MEMORY_BYTES=8850000000 ;;
+# -------------------------------------------------------------------------- #
+# Profile resolution — context, KV budget and DCP size are a matched triple,
+# picked by name. The context must sit below the KV capacity the byte budget
+# buys, and the byte budget must leave enough unified memory for the twelve-shape
+# FULL graph capture. The profile also fixes DCP_SIZE; see the DCP guard below.
+# -------------------------------------------------------------------------- #
+case "$R13_PROFILE" in
+  fast)
+    MAX_MODEL_LEN=319000
+    KV_CACHE_MEMORY_BYTES=10233000000
+    DCP_SIZE=1
+    ;;
+  balanced)
+    MAX_MODEL_LEN=520000
+    KV_CACHE_MEMORY_BYTES=8410000000
+    DCP_SIZE=2
+    ;;
   *)
     cat >&2 <<'GATE'
-refusing to run: R9_PROFILE must be one of the authorized named pairs.
+refusing to run: R13_PROFILE must be one of the authorized named profiles.
 
-max_model_len and kv_cache_memory_bytes are a matched pair, not two knobs. The
-context must sit below the KV capacity the byte budget buys, and the byte budget
-must leave enough unified memory for the nine-shape FULL graph capture.
+R13 ships two matched envelopes. context, KV budget and DCP size are a
+matched triple, not three knobs: the context must sit below the KV capacity
+the byte budget buys, and the byte budget must leave enough unified memory for
+the twelve-shape FULL graph capture.
 
-  520k   max_model_len=520000  kv_cache_memory_bytes=8410000000   (qualified)
-  550k   max_model_len=550000  kv_cache_memory_bytes=8850000000   (prior; see
-         docs/BENCHMARKS.md section 5 before choosing it)
+  fast       max_model_len=319000  kv_cache_memory_bytes=10233000000  DCP1
+                    short-context throughput. Smaller API context, larger per-rank
+                    KV budget, no DCP comm layer. Highest prefill / C4 aggregate.
+                    Measured: ~695 tok/s prefill, ~83 tok/s C4 aggregate.
+  balanced   max_model_len=520000  kv_cache_memory_bytes=8410000000    DCP2
+                    long-context capacity. Larger API context, smaller per-rank KV
+                    budget, DCP2 comm layer. Faster prose decode C1 (~31 tok/s vs
+                    ~23) at the cost of lower C4 aggregate (~72 tok/s).
+                    Measured: ~602 tok/s prefill.
+
+Both profiles are C4 (MAX_NUM_SEQS=4, twelve-shape capture set 6,12,18,24).
+The tradeoffs are in docs/BENCHMARKS.md. Pick the profile that matches the
+workload; do not mix the three numbers by hand.
 
 Nothing was touched.
 GATE
     exit 12
     ;;
 esac
+
+# -------------------------------------------------------------------------- #
+# DCP comm backend is only valid for DCP>1.
+# Newer vLLM rejects an explicit --dcp-comm-backend at
+# decode-context-parallel-size 1 (it would crash the engine on boot). DCP1 omits
+# both DCP comm flags entirely; DCP2 passes them. This is the R13 fix.
+# -------------------------------------------------------------------------- #
+if [[ "${DCP_SIZE}" -gt 1 ]]; then
+  [[ -n "$DCP_COMM_BACKEND" ]] \
+    || die "DCP_COMM_BACKEND is required when the profile uses DCP>1" 6
+  DCP_ARGS=(--dcp-comm-backend "$DCP_COMM_BACKEND" --dcp-kv-cache-interleave-size 1)
+else
+  DCP_COMM_BACKEND=""
+  DCP_ARGS=()
+fi
 
 # --------------------------------------------------------------------------
 # Host preconditions.
@@ -192,6 +233,11 @@ DOCKER_RUN=(
   sleep infinity
 )
 
+# DCP args are emitted ONLY when DCP>1. At DCP1 the engine rejects an explicit
+# comm backend (it crashes on boot); --dcp-kv-cache-interleave-size alongside a
+# DCP1 size is also inconsistent. Both flags are omitted for the fast profile.
+# DCP_ARGS is set by the guard above the profile block and is empty at DCP1.
+
 # hf-overrides: the GB10 sparse-attention requirement established by
 # CosmicRaisins/glm-5.2-gb10. F = full attention layer, S = sparse.
 HF_OVERRIDES='{"use_index_cache":true,"index_topk_pattern":"FFFSSSFSSSFSSSFSSSFSSSFSSSFSSSFSSSFSSSFSSSFSSSFSSSFSSSFSSSFSSSFSSSFSSSFSSSFSSS"}'
@@ -209,9 +255,8 @@ SERVER_ARGV=(
   --quantization compressed-tensors
   --distributed-executor-backend ray
   --tensor-parallel-size "$TENSOR_PARALLEL_SIZE"
-  --decode-context-parallel-size "$DECODE_CONTEXT_PARALLEL_SIZE"
-  --dcp-comm-backend "$DCP_COMM_BACKEND"
-  --dcp-kv-cache-interleave-size 1
+  --decode-context-parallel-size "$DCP_SIZE"
+  ${DCP_ARGS[@]+"${DCP_ARGS[@]}"}
   --pipeline-parallel-size "$PIPELINE_PARALLEL_SIZE"
   --gpu-memory-utilization 0.88
   --max-model-len "$MAX_MODEL_LEN"
