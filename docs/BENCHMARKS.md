@@ -20,10 +20,10 @@ present in R9. The numbers below are from the R13 image
 `r9.1-scheduler-liveness-4lane`), measured 2026-07-31 with 4/4 nodes
 healthy and **0 preemptions** in every leg.
 
-| Leg | Profile | DCP | `max_model_len` | prefill @200K (tok/s) | C1 prose decode (tok/s) | C4 aggregate (tok/s) |
+| Profile | DCP | `max_model_len` | prefill @200K (tok/s) | C1 natural-prose decode (tok/s) | C1 peak decode (tok/s) | C4 aggregate (tok/s) |
 |---|---|---|---|---|---|---|
-| Fast | `fast` | 1 | 319,000 | 695.1 | 23.0 | 83.4 |
-| Balanced | `balanced` | 2 | 520,000 | 602.0 | 31.14 | 71.83 |
+| `fast` | 1 | 319,000 | 695.1 | 23.0 | 33.0 | 83.4 |
+| `balanced` | 2 | 520,000 | 602.0 | not measured | 31.14 | 71.83 |
 
 **Full-coverage check:** query lengths `[3,5,6]` across request counts `1..4`; the
 complete twelve-shape set is `3/6/9/12`, `5/10/15/20`, `6/12/18/24`. FULL CUDA-graph
@@ -36,14 +36,19 @@ start per leg.
 * The **prefill** number is computed-KV-tokens ÷ prefill-seconds for a 200K-token
   cold prompt (prefix-cache hit delta 0), completion capped at 128 tokens with
   `ignore_eos=true`. It is a single-request figure, not a sustained rate.
-* **C1 prose decode** is concurrency-1 decode throughput on a representative prose
-  payload; **C4 aggregate** is aggregate decode throughput at concurrency 4 across
-  the same payload shape.
-* The `fast` leg wins on prefill and C4 aggregate because it carries no DCP comm
-  layer; `balanced` wins on C1 prose decode (≈31 vs ≈23 tok/s) because DCP2 splits
-  the context across ranks. The `balanced` leg is the only one that can serve the
-  500K-class cold prompt (`max_model_len=520,000` in the table above), at the cost
-  of lower aggregate C4 throughput.
+* **C1 natural-prose decode** is concurrency-1 decode throughput on a representative
+  prose payload; **C1 peak decode** is concurrency-1 decode on a synthetic/patterned
+  payload that exercises the decoder more favorably. **C4 aggregate** is aggregate decode
+  throughput at concurrency 4.
+* A natural-prose decode leg was measured on `fast` only (23.0 tok/s). The
+  `balanced` 31.14 tok/s figure is a **peak/synthetic** C1 decode number, not a
+  natural-prose number — do not read it as "balanced is faster at prose." It is a
+  different, faster payload type, and a natural-prose leg was not run on `balanced`.
+* `fast` wins on every speed leg — prefill, natural-prose C1 decode, and C4 aggregate
+  — because it carries no DCP comm layer. `balanced`'s sole advantage is the 520K
+  context window: it is the only profile that can serve a 500K-class cold prompt
+  (`max_model_len=520,000` in the table above), at the cost of lower aggregate C4
+  throughput.
 
 ### Denominators and caveats — read before quoting
 
