@@ -1,6 +1,27 @@
 # GLM-5.2 R9 — Adaptive MTP (K2→K4→K5) with FULL CUDA graphs, on 4× DGX Spark
 
-**GLM-5.2 on 4× DGX Spark with adaptive MTP K2/K4/K5, FULL CUDA graphs, DCP2, 520K context, and a downloadable ARM64 runtime image.**
+**This recipe ships two launch profiles — `fast` and `balanced` — both at C4 concurrency (`max_num_seqs=4`) with FULL CUDA-graph coverage, adaptive MTP K2→K4→K5, and a downloadable ARM64 runtime image. The two profiles trade context capacity against single-request decode speed and aggregate throughput.** Numbers below were measured on the four-node DGX Spark cluster on 2026-07-31 with 4/4 nodes healthy and **0 preemptions** in every leg; see [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md) for denominators and the receipts.
+
+## The two profiles at a glance
+
+`fast` runs decode-context-parallel size 1 (DCP1) — all KV state on one rank group, no cross-rank decode comm — for maximum prefill and aggregate throughput. `balanced` runs DCP2 — KV cache split across two rank groups — to reach a 520K context window at the cost of lower aggregate throughput and a comm layer. Both keep FULL CUDA graphs across the full C1–C4 concurrency range (twelve-shape set `[6,12,18,24]`).
+
+| What it describes | `fast` | `balanced` |
+|---|---|---|
+| Decode-context parallel (DCP) | 1 (no decode comm) | 2 (KV split across ranks) |
+| Max context window (`max_model_len`) | 319,000 tokens | 520,000 tokens |
+| Max concurrent requests (`max_num_seqs`) | 4 | 4 |
+| KV cache memory per rank | ~10.2 GB | ~8.4 GB |
+| **Prefill, 200K cold prompt, 1 request** | **695.1 tok/s** | **602.0 tok/s** |
+| **Decode, 1 request — prose payload** | **23.0 tok/s** | **31.1 tok/s** |
+| Decode, 1 request — peak (synthetic payload) | 33.0 tok/s | not measured separately |
+| **Decode, 4 concurrent — aggregate** | **83.4 tok/s** | **71.8 tok/s** |
+| Decode, 4 concurrent — per-request range | 23.8–27.7 tok/s | not reported per-lane |
+| Preemptions (all legs) | 0 | 0 |
+| FULL CUDA-graph coverage, C1–C4 | yes | yes |
+| Nodes healthy | 4 / 4 | 4 / 4 |
+
+**Read the table correctly.** Fast wins on prefill and 4-way aggregate decode because it carries no DCP comm layer; balanced wins on single-request prose decode (~31 vs ~23 tok/s) and is the **only** profile that can serve a 500K-class cold prompt. The 200K prefill figure is a single-request, single-run number on this exact cluster — not a sustained rate and not generalizable. The C4 aggregate is the sum of per-request decode rates at concurrency 4 on a fixed payload, not a normalized benchmark score. The prefill row and the context-window row are different measurements: a 200K prefill leg on `fast` does **not** prove a 319K cold-prompt claim, and `balanced`'s 520K ceiling is the largest proven cold-prompt envelope in this table. Image: `sha256:6d7b06b1…` (release `r13-balanced-fast-c4`).
 
 This is the performance/capacity branch of a line of work that previously shipped
 [1M-context GLM-5.2 on 4× DGX Spark](https://github.com/0xdfi/GLM-5.2-1M-4x-DGX-Spark)
